@@ -548,22 +548,7 @@
 </div>
 
 <script>
-// ==================== JSONBin.io 云端存储配置 ====================
-const JSONBIN_CONFIG = {
-  collectionId: '69ec7615aaba88219736c55e',
-  apiKey: '$2a$10$mGxNDTQ76IlXpLkFHjvA8e82c.zwjIKwBrxJKKiGad3YpdIlJNb1a',
-  baseUrl: 'https://api.jsonbin.io/v3/c'
-};
-
-// 生成唯一用户ID
-function getUserId() {
-  let userId = localStorage.getItem('qhg_user_id');
-  if (!userId) {
-    userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('qhg_user_id', userId);
-  }
-  return userId;
-}
+// ==================== 奖品配置 ====================
 
 // ==================== 奖品配置 ====================
 // 5个奖项显示在转盘上
@@ -698,22 +683,11 @@ function drawWheel(rotation = 0) {
 }
 
 // ==================== 抽奖入口 ====================
-async function startLottery() {
+function startLottery() {
   if (isSpinning) return;
   
-  // 先检查本地
+  // 检查是否已抽奖
   if (localStorage.getItem(STORAGE_KEY_DRAWN)) {
-    showAlreadyDrawn();
-    return;
-  }
-  
-  // 再检查云端
-  const cloudStatus = await checkCloudDrawn();
-  if (cloudStatus.drawn) {
-    if (cloudStatus.prize) {
-      localStorage.setItem(STORAGE_KEY_DRAWN, '1');
-      localStorage.setItem(STORAGE_KEY_RESULT, JSON.stringify(cloudStatus.prize));
-    }
     showAlreadyDrawn();
     return;
   }
@@ -789,100 +763,20 @@ function spinWheel() {
   requestAnimationFrame(animate);
 }
 
-// ==================== 保存结果到云端 ====================
-async function saveResult(prize) {
-  const now = new Date();
-  const record = {
-    id: Date.now(),
-    userId: getUserId(),
-    name: userNickname || '匿名用户',
-    prize: prize.name,
-    prizeEmoji: prize.emoji,
-    time: now.toLocaleString('zh-CN'),
-    timestamp: now.getTime()
-  };
-
-  // 保存到本地
+// ==================== 保存结果到本地 ====================
+function saveResult(prize) {
+  // 保存到本地存储
   localStorage.setItem(STORAGE_KEY_DRAWN, '1');
   localStorage.setItem(STORAGE_KEY_RESULT, JSON.stringify({ prize: prize.name, emoji: prize.emoji }));
-
-  // 保存到云端
-  try {
-    const url = `${JSONBIN_CONFIG.baseUrl}/${JSONBIN_CONFIG.collectionId}/push`;
-    // 先获取现有数据
-    const getResp = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'X-Master-Key': JSONBIN_CONFIG.apiKey
-      }
-    });
-    const getData = await getResp.json();
-    let existingRecords = [];
-    if (getData.record && Array.isArray(getData.record)) {
-      existingRecords = getData.record;
-    }
-    
-    // 添加新记录
-    existingRecords.push(record);
-    
-    // 推送到云端
-    await fetch(url, {
-      method: 'PUT',
-      headers: {
-        'X-Master-Key': JSONBIN_CONFIG.apiKey,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(existingRecords)
-    });
-  } catch (e) {
-    console.log('云端同步失败，本地已保存');
-  }
-}
-
-// ==================== 检查是否已抽奖（云端） ====================
-async function checkCloudDrawn() {
-  try {
-    const url = `${JSONBIN_CONFIG.baseUrl}/${JSONBIN_CONFIG.collectionId}`;
-    const resp = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'X-Master-Key': JSONBIN_CONFIG.apiKey
-      }
-    });
-    const data = await resp.json();
-    if (data.record && Array.isArray(data.record)) {
-      const userId = getUserId();
-      const userRecord = data.record.find(r => r.userId === userId);
-      if (userRecord) {
-        return { drawn: true, prize: { name: userRecord.prize, emoji: userRecord.prizeEmoji } };
-      }
-    }
-    return { drawn: false };
-  } catch (e) {
-    console.log('检查云端状态失败');
-    return { drawn: localStorage.getItem(STORAGE_KEY_DRAWN) ? true : false, localOnly: true };
-  }
 }
 
 // ==================== 启动时检查状态 ====================
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', () => {
   createParticles();
   drawWheel();
   
-  // 先检查本地
+  // 检查是否已抽奖
   if (localStorage.getItem(STORAGE_KEY_DRAWN)) {
-    showAlreadyDrawn();
-    return;
-  }
-  
-  // 再检查云端
-  const cloudStatus = await checkCloudDrawn();
-  if (cloudStatus.drawn) {
-    // 云端已有记录，保存到本地并显示
-    if (cloudStatus.prize) {
-      localStorage.setItem(STORAGE_KEY_DRAWN, '1');
-      localStorage.setItem(STORAGE_KEY_RESULT, JSON.stringify(cloudStatus.prize));
-    }
     showAlreadyDrawn();
   }
 });
