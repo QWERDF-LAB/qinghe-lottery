@@ -389,10 +389,18 @@
 </div>
 
 <div class="footer">
-  清和膏抽奖管理系统 · 仅供内部使用 · 数据存储于本地浏览器
+  清和膏抽奖管理系统 · 仅供内部使用 · 数据存储于云端（JSONBin）
 </div>
 
 <script>
+// ==================== JSONBin.io 云端存储配置 ====================
+const JSONBIN_CONFIG = {
+  collectionId: '69ec7615aaba88219736c55e',
+  apiKey: '$2a$10$mGxNDTQ76IlXpLkFHjvA8e82c.zwjIKwBrxJKKiGad3YpdIlJNb1a',
+  baseUrl: 'https://api.jsonbin.io/v3/c'
+};
+
+// ==================== 管理密码 ====================
 const ADMIN_PASSWORD = 'qhg2024';
 const RECORDS_KEY = 'qhg_records';
 
@@ -414,8 +422,25 @@ function doLogin() {
 
 let allRecords = [];
 
-function loadData() {
-  allRecords = JSON.parse(localStorage.getItem(RECORDS_KEY) || '[]');
+async function loadData() {
+  try {
+    const url = `${JSONBIN_CONFIG.baseUrl}/${JSONBIN_CONFIG.collectionId}`;
+    const resp = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'X-Master-Key': JSONBIN_CONFIG.apiKey
+      }
+    });
+    const data = await resp.json();
+    if (data.record && Array.isArray(data.record)) {
+      allRecords = data.record;
+    } else {
+      allRecords = [];
+    }
+  } catch (e) {
+    console.error('加载云端数据失败', e);
+    allRecords = [];
+  }
   updateStats();
   renderTable(allRecords);
 }
@@ -499,10 +524,24 @@ function exportCSV() {
   URL.revokeObjectURL(url);
 }
 
-function clearAllData() {
+async function clearAllData() {
   if (!confirm('⚠️ 确认要清空所有抽奖记录吗？此操作不可恢复！')) return;
   if (!confirm('⚠️ 二次确认：清空后数据将永久丢失，是否继续？')) return;
-  localStorage.removeItem(RECORDS_KEY);
+  
+  try {
+    const url = `${JSONBIN_CONFIG.baseUrl}/${JSONBIN_CONFIG.collectionId}/push`;
+    await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'X-Master-Key': JSONBIN_CONFIG.apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify([])
+    });
+  } catch (e) {
+    console.error('清空云端数据失败', e);
+  }
+  
   allRecords = [];
   updateStats();
   renderTable([]);
