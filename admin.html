@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>清和膏抽奖 · 管理控制台</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    background: #0f1117;
+    font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;
+    color: #e0e0e0;
+  }
+
+  /* 顶部导航 */
+  .navbar {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+    padding: 0 24px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.5);
+  }
+  .navbar-brand { display: flex; align-items: center; gap: 12px; }
+  .brand-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, #d4af37, #ffd700);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .brand-name { font-size: 18px; font-weight: 700; color: #ffd700; letter-spacing: 2px; }
+  .brand-tag {
+    font-size: 11px; color: rgba(255,215,0,0.5);
+    background: rgba(255,215,0,0.08);
+    padding: 2px 8px; border-radius: 20px;
+    border: 1px solid rgba(255,215,0,0.2);
+  }
+  .navbar-right { display: flex; align-items: center; gap: 12px; }
+  .btn-refresh {
+    padding: 8px 18px;
+    background: rgba(255,215,0,0.1);
+    border: 1px solid rgba(255,215,0,0.3);
+    color: #ffd700; border-radius: 8px; cursor: pointer; font-size: 13px;
+    transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+  }
+  .btn-refresh:hover { background: rgba(255,215,0,0.2); }
+  .btn-export {
+    padding: 8px 18px;
+    background: linear-gradient(135deg, #d4af37, #ffd700);
+    border: none; color: #1a1a2e; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-weight: 700; transition: all 0.2s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn-export:hover { transform: scale(1.03); }
+  .btn-danger {
+    padding: 8px 18px;
+    background: rgba(230,57,70,0.1);
+    border: 1px solid rgba(230,57,70,0.3);
+    color: #e63946; border-radius: 8px; cursor: pointer; font-size: 13px;
+    transition: all 0.2s;
+  }
+  .btn-danger:hover { background: rgba(230,57,70,0.2); }
+
+  /* 登录遮罩 */
+  #loginModal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .login-box {
+    background: #1a1a2e;
+    border: 2px solid rgba(255,215,0,0.4);
+    border-radius: 20px; padding: 40px 36px;
+    text-align: center; width: 340px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+  }
+  .login-icon { font-size: 48px; margin-bottom: 12px; }
+  .login-title { color: #ffd700; font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .login-sub { color: rgba(255,255,255,0.5); font-size: 13px; margin-bottom: 24px; }
+  .login-input {
+    width: 100%; padding: 12px 16px; border-radius: 10px;
+    border: 1px solid rgba(255,215,0,0.3);
+    background: rgba(255,255,255,0.06); color: #fff;
+    font-size: 16px; margin-bottom: 16px; outline: none;
+    letter-spacing: 4px; text-align: center; transition: border-color 0.3s;
+  }
+  .login-input:focus { border-color: #ffd700; }
+  .login-btn {
+    width: 100%; padding: 13px;
+    background: linear-gradient(135deg, #d4af37, #ffd700);
+    border: none; border-radius: 10px; color: #1a1a2e;
+    font-size: 16px; font-weight: 900; cursor: pointer; letter-spacing: 2px; transition: all 0.2s;
+  }
+  .login-btn:hover { transform: scale(1.02); }
+  .login-error { color: #e63946; font-size: 13px; margin-top: 10px; min-height: 20px; }
+
+  /* 主内容 */
+  .main-content { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+  /* 统计卡片 */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 16px; margin-bottom: 28px;
+  }
+  .stat-card {
+    background: #1a1a2e;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 20px;
+    position: relative; overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); border-color: rgba(255,215,0,0.3); }
+  .stat-card::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 3px; border-radius: 14px 14px 0 0;
+  }
+  .stat-card.total::before { background: linear-gradient(90deg, #ffd700, #d4af37); }
+  .stat-card.c1::before   { background: linear-gradient(90deg, #e63946, #ff6b6b); }
+  .stat-card.c2::before   { background: linear-gradient(90deg, #457b9d, #7fb3d6); }
+  .stat-card.c3::before   { background: linear-gradient(90deg, #2a9d8f, #52c8bc); }
+  .stat-card.c4::before   { background: linear-gradient(90deg, #8338ec, #b57bee); }
+  .stat-card.c5::before   { background: linear-gradient(90deg, #c47a1e, #f4a261); }
+  .stat-label { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 8px; }
+  .stat-value { font-size: 36px; font-weight: 900; color: #fff; }
+  .stat-icon { position: absolute; right: 16px; top: 20px; font-size: 28px; opacity: 0.3; }
+  .stat-sub { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 4px; }
+
+  /* 概率配置（仅内部可见） */
+  .prob-bar-section {
+    background: #1a1a2e;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 20px 24px; margin-bottom: 28px;
+  }
+  .section-title {
+    font-size: 15px; font-weight: 700; color: #ffd700;
+    margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .prob-item { margin-bottom: 14px; }
+  .prob-info { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 13px; }
+  .prob-name { color: rgba(255,255,255,0.85); }
+  .prob-pct { color: rgba(255,215,0,0.8); font-weight: 700; }
+  .prob-bar-bg { height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+  .prob-bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+  .locked-tag {
+    display: inline-block;
+    background: rgba(230,57,70,0.15); border: 1px solid rgba(230,57,70,0.4);
+    color: #e63946; font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-left: 6px;
+  }
+
+  /* 筛选工具栏 */
+  .toolbar {
+    background: #1a1a2e;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 16px 20px; margin-bottom: 16px;
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  }
+  .search-input {
+    flex: 1; min-width: 200px; padding: 9px 14px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px; color: #fff; font-size: 13px; outline: none;
+    transition: border-color 0.3s;
+  }
+  .search-input:focus { border-color: rgba(255,215,0,0.5); }
+  .filter-select {
+    padding: 9px 14px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px; color: #fff; font-size: 13px; outline: none; cursor: pointer; min-width: 160px;
+  }
+  .filter-select option { background: #1a1a2e; color: #fff; }
+  .toolbar-count { color: rgba(255,255,255,0.4); font-size: 13px; }
+
+  /* 数据表格 */
+  .table-wrapper {
+    background: #1a1a2e;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; overflow: hidden;
+  }
+  .records-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .records-table thead {
+    background: rgba(255,215,0,0.06);
+    border-bottom: 1px solid rgba(255,215,0,0.2);
+  }
+  .records-table th {
+    padding: 14px 16px; text-align: left;
+    color: rgba(255,215,0,0.8); font-weight: 600;
+    letter-spacing: 1px; font-size: 12px; white-space: nowrap;
+  }
+  .records-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.85); white-space: nowrap;
+  }
+  .records-table tr:last-child td { border-bottom: none; }
+  .records-table tr:hover td { background: rgba(255,255,255,0.03); }
+  .prize-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  }
+  .badge-1 { background: rgba(230,57,70,0.15);  color: #ff8a94; border: 1px solid rgba(230,57,70,0.3); }
+  .badge-2 { background: rgba(69,123,157,0.15); color: #7fb3d6; border: 1px solid rgba(69,123,157,0.3); }
+  .badge-3 { background: rgba(42,157,143,0.15); color: #52c8bc; border: 1px solid rgba(42,157,143,0.3); }
+  .badge-4 { background: rgba(131,56,236,0.15); color: #b57bee; border: 1px solid rgba(131,56,236,0.3); }
+  .no-data { text-align: center; padding: 60px 20px; color: rgba(255,255,255,0.25); font-size: 14px; }
+  .no-data .no-icon { font-size: 48px; margin-bottom: 12px; }
+  .time-cell { color: rgba(255,255,255,0.4); }
+
+  /* 告警条 */
+  .alert-bar {
+    background: rgba(255,215,0,0.08);
+    border: 1px solid rgba(255,215,0,0.25);
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: rgba(255,215,0,0.8);
+  }
+
+  .footer { text-align: center; padding: 24px; color: rgba(255,255,255,0.2); font-size: 12px; }
+
+  @media (max-width: 768px) {
+    .main-content { padding: 16px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .records-table { font-size: 12px; }
+    .records-table th, .records-table td { padding: 10px 10px; }
+    .navbar { padding: 0 16px; }
+    .brand-name { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 登录遮罩 -->
+<div id="loginModal">
+  <div class="login-box">
+    <div class="login-icon">🔐</div>
+    <div class="login-title">管理控制台</div>
+    <div class="login-sub">清和膏抽奖活动 · 内部管理系统<br>请输入管理密码</div>
+    <input type="password" class="login-input" id="passwordInput" placeholder="● ● ● ● ● ●" maxlength="20" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">登 录</button>
+    <div class="login-error" id="loginError"></div>
+    <div style="margin-top:16px;font-size:12px;color:rgba(255,255,255,0.2);">默认密码：qhg2024</div>
+  </div>
+</div>
+
+<!-- 顶部导航 -->
+<div class="navbar">
+  <div class="navbar-brand">
+    <div class="brand-icon">🌿</div>
+    <div>
+      <div class="brand-name">清和膏 · 管理控制台</div>
+    </div>
+    <span class="brand-tag">内部专用</span>
+  </div>
+  <div class="navbar-right">
+    <button class="btn-refresh" onclick="loadData()">🔄 刷新数据</button>
+    <button class="btn-export" onclick="exportCSV()">📥 导出CSV</button>
+    <button class="btn-danger" onclick="clearAllData()">🗑️ 清空记录</button>
+  </div>
+</div>
+
+<div class="main-content">
+
+  <!-- 安全提示 -->
+  <div class="alert-bar">
+    <span>🔒</span>
+    <span>本页面为内部管理专用，请勿将此链接发送给客户。客户抽奖页面请使用 <strong>lottery.html</strong></span>
+  </div>
+
+  <!-- 统计卡片（6张：总计 + 5项奖品） -->
+  <div class="stats-grid">
+    <div class="stat-card total">
+      <div class="stat-label">总参与人数</div>
+      <div class="stat-value" id="statTotal">0</div>
+      <div class="stat-icon">👥</div>
+      <div class="stat-sub">累计抽奖次数</div>
+    </div>
+    <div class="stat-card c1">
+      <div class="stat-label">优惠券 ¥100</div>
+      <div class="stat-value" id="statP1">0</div>
+      <div class="stat-icon">🎫</div>
+      <div class="stat-sub">人获得</div>
+    </div>
+    <div class="stat-card c2">
+      <div class="stat-label">优惠券 ¥200</div>
+      <div class="stat-value" id="statP2">0</div>
+      <div class="stat-icon">🎟️</div>
+      <div class="stat-sub">人获得</div>
+    </div>
+    <div class="stat-card c3">
+      <div class="stat-label">购疗程赠半盒</div>
+      <div class="stat-value" id="statP3">0</div>
+      <div class="stat-icon">🧴</div>
+      <div class="stat-sub">人获得</div>
+    </div>
+    <div class="stat-card c4">
+      <div class="stat-label">购疗程赠一盒</div>
+      <div class="stat-value" id="statP4">0</div>
+      <div class="stat-icon">💊</div>
+      <div class="stat-sub">人获得</div>
+    </div>
+    <div class="stat-card c5">
+      <div class="stat-label">免费领取一盒</div>
+      <div class="stat-value" id="statP5">0</div>
+      <div class="stat-icon">🎁</div>
+      <div class="stat-sub">永久锁定 0%</div>
+    </div>
+  </div>
+
+  <!-- 概率配置（管理端内部可见） -->
+  <div class="prob-bar-section">
+    <div class="section-title">🎯 奖项概率配置（已锁定 · 仅内部可见）</div>
+
+    <div class="prob-item">
+      <div class="prob-info">
+        <span class="prob-name">🎫 清和膏优惠券 ¥100</span>
+        <span class="prob-pct">25%</span>
+      </div>
+      <div class="prob-bar-bg"><div class="prob-bar-fill" style="width:25%;background:linear-gradient(90deg,#e63946,#ff6b6b)"></div></div>
+    </div>
+    <div class="prob-item">
+      <div class="prob-info">
+        <span class="prob-name">🎟️ 清和膏优惠券 ¥200</span>
+        <span class="prob-pct">25%</span>
+      </div>
+      <div class="prob-bar-bg"><div class="prob-bar-fill" style="width:25%;background:linear-gradient(90deg,#457b9d,#7fb3d6)"></div></div>
+    </div>
+    <div class="prob-item">
+      <div class="prob-info">
+        <span class="prob-name">🧴 购一疗程赠送半盒</span>
+        <span class="prob-pct">25%</span>
+      </div>
+      <div class="prob-bar-bg"><div class="prob-bar-fill" style="width:25%;background:linear-gradient(90deg,#2a9d8f,#52c8bc)"></div></div>
+    </div>
+    <div class="prob-item">
+      <div class="prob-info">
+        <span class="prob-name">💊 购一疗程赠送一盒</span>
+        <span class="prob-pct">25%</span>
+      </div>
+      <div class="prob-bar-bg"><div class="prob-bar-fill" style="width:25%;background:linear-gradient(90deg,#8338ec,#b57bee)"></div></div>
+    </div>
+    <div class="prob-item">
+      <div class="prob-info">
+        <span class="prob-name">🎁 免费领取一盒清和膏 <span class="locked-tag">永久锁定 0%</span></span>
+        <span class="prob-pct" style="color:#e63946">0%（不可能中奖）</span>
+      </div>
+      <div class="prob-bar-bg"><div class="prob-bar-fill" style="width:0%;background:#e63946"></div></div>
+    </div>
+  </div>
+
+  <!-- 搜索筛选 -->
+  <div class="toolbar">
+    <input type="text" class="search-input" id="searchInput" placeholder="🔍 搜索微信昵称..." oninput="filterTable()">
+    <select class="filter-select" id="prizeFilter" onchange="filterTable()">
+      <option value="">全部奖品</option>
+      <option value="¥100">优惠券 ¥100</option>
+      <option value="¥200">优惠券 ¥200</option>
+      <option value="赠半盒">购疗程赠半盒</option>
+      <option value="赠一盒">购疗程赠一盒</option>
+    </select>
+    <span class="toolbar-count" id="toolbarCount">共 0 条记录</span>
+  </div>
+
+  <!-- 数据表格（无手机号列） -->
+  <div class="table-wrapper">
+    <table class="records-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>微信昵称</th>
+          <th>获得奖品</th>
+          <th>抽奖时间</th>
+        </tr>
+      </thead>
+      <tbody id="recordsBody">
+        <tr><td colspan="4"><div class="no-data"><div class="no-icon">📭</div>暂无抽奖记录</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="footer">
+  清和膏抽奖管理系统 · 仅供内部使用 · 数据存储于本地浏览器
+</div>
+
+<script>
+const ADMIN_PASSWORD = 'qhg2024';
+const RECORDS_KEY = 'qhg_records';
+
+function doLogin() {
+  const pwd = document.getElementById('passwordInput').value;
+  if (pwd === ADMIN_PASSWORD) {
+    document.getElementById('loginModal').style.display = 'none';
+    loadData();
+  } else {
+    document.getElementById('loginError').textContent = '❌ 密码错误，请重试';
+    document.getElementById('passwordInput').value = '';
+    document.getElementById('passwordInput').style.borderColor = '#e63946';
+    setTimeout(() => {
+      document.getElementById('loginError').textContent = '';
+      document.getElementById('passwordInput').style.borderColor = '';
+    }, 2000);
+  }
+}
+
+let allRecords = [];
+
+function loadData() {
+  allRecords = JSON.parse(localStorage.getItem(RECORDS_KEY) || '[]');
+  updateStats();
+  renderTable(allRecords);
+}
+
+function updateStats() {
+  const total = allRecords.length;
+  const p1 = allRecords.filter(r => r.prize.includes('¥100')).length;
+  const p2 = allRecords.filter(r => r.prize.includes('¥200')).length;
+  const p3 = allRecords.filter(r => r.prize.includes('半盒')).length;
+  const p4 = allRecords.filter(r => r.prize.includes('一盒') && !r.prize.includes('半盒') && !r.prize.includes('免费')).length;
+  const p5 = allRecords.filter(r => r.prize.includes('免费')).length; // 永远为0
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statP1').textContent = p1;
+  document.getElementById('statP2').textContent = p2;
+  document.getElementById('statP3').textContent = p3;
+  document.getElementById('statP4').textContent = p4;
+  document.getElementById('statP5').textContent = p5;
+}
+
+function getPrizeBadgeClass(prize) {
+  if (prize.includes('¥100'))  return 'badge-1';
+  if (prize.includes('¥200'))  return 'badge-2';
+  if (prize.includes('半盒'))  return 'badge-3';
+  return 'badge-4';
+}
+
+function renderTable(records) {
+  const tbody = document.getElementById('recordsBody');
+  document.getElementById('toolbarCount').textContent = `共 ${records.length} 条记录`;
+
+  if (records.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4"><div class="no-data"><div class="no-icon">📭</div>暂无抽奖记录</div></td></tr>';
+    return;
+  }
+
+  const sorted = [...records].sort((a, b) => b.timestamp - a.timestamp);
+  tbody.innerHTML = sorted.map((r, i) => `
+    <tr>
+      <td style="color:rgba(255,255,255,0.3)">${sorted.length - i}</td>
+      <td><strong>${escapeHtml(r.name || '匿名用户')}</strong></td>
+      <td>
+        <span class="prize-badge ${getPrizeBadgeClass(r.prize)}">
+          ${r.prizeEmoji} ${r.prize}
+        </span>
+      </td>
+      <td class="time-cell">${r.time}</td>
+    </tr>
+  `).join('');
+}
+
+function filterTable() {
+  const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+  const prizeFilter = document.getElementById('prizeFilter').value;
+
+  let filtered = allRecords.filter(r => {
+    const name = (r.name || '').toLowerCase();
+    const matchKeyword = !keyword || name.includes(keyword);
+    const matchPrize = !prizeFilter || r.prize.includes(prizeFilter);
+    return matchKeyword && matchPrize;
+  });
+
+  renderTable(filtered);
+}
+
+function exportCSV() {
+  if (allRecords.length === 0) { alert('暂无数据可导出'); return; }
+
+  const header = '序号,微信昵称,奖品,抽奖时间';
+  const rows = [...allRecords]
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((r, i) => `${i+1},${r.name || '匿名用户'},"${r.prize}",${r.time}`);
+
+  const csv = '\uFEFF' + [header, ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `清和膏抽奖记录_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearAllData() {
+  if (!confirm('⚠️ 确认要清空所有抽奖记录吗？此操作不可恢复！')) return;
+  if (!confirm('⚠️ 二次确认：清空后数据将永久丢失，是否继续？')) return;
+  localStorage.removeItem(RECORDS_KEY);
+  allRecords = [];
+  updateStats();
+  renderTable([]);
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+setInterval(() => {
+  if (document.getElementById('loginModal').style.display === 'none') loadData();
+}, 30000);
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('loginModal').style.display !== 'none') doLogin();
+});
+</script>
+</body>
+</html>
